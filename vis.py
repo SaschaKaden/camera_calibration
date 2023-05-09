@@ -18,17 +18,13 @@ def set_label(ax, title):
 
 
 def view_points(transforms, title):
-    tm = TransformManager()
-    count = 0
-    for transform in transforms:
-        tm.add_transform("base", "grasp" + str(count), transform)
-        count += 1
-
     fig = plt.figure(figsize=(10, 5))
     ax = make_3d_axis(1, 121)
-    ax = tm.plot_frames_in("base", ax=ax, alpha=0.6, s=0.5)
-    ax.view_init(elev=30, azim=20)
 
+    for transform in transforms:
+        pt.plot_transform(ax, A2B=transform)
+
+    ax.view_init(elev=30, azim=20)
     set_label(ax, title)
     fig.show()
 
@@ -80,18 +76,18 @@ def view_boards(base_to_grasp, boards, new_boards, title):
 
 
 def view_poses(base_to_tcp_Ts, tcp_to_cam, cam_to_pattern_Ts, title):
-    tm = TransformManager()
-    count = 0
-    for i in range(len(base_to_tcp_Ts)):
-        tm.add_transform("base", "g" + str(count), base_to_tcp_Ts[i])
-        tm.add_transform("g" + str(count), "c" + str(count), tcp_to_cam)
-        tm.add_transform("c" + str(count), "b" + str(count), cam_to_pattern_Ts[i])
-        count += 1
-
     fig = plt.figure(figsize=(10, 5))
     ax = make_3d_axis(1, 121)
-    ax = tm.plot_frames_in("base", ax=ax, alpha=0.6, s=0.2)
-    ax.view_init(elev=30, azim=20)
 
+    count = 0
+    for i in range(len(base_to_tcp_Ts)):
+        pt.plot_transform(ax, A2B=base_to_tcp_Ts[i], name="t" + str(count))
+        # pt.plot_transform(
+        #     ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam, name="c" + str(count))
+        pt.plot_transform(
+            ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i], name="b" + str(count))
+        count += 1
+
+    ax.view_init(elev=30, azim=20)
     set_label(ax, title)
     fig.show()
