@@ -19,13 +19,13 @@ def set_label(ax, title):
 
 def view_points(transforms, title):
     fig = plt.figure(figsize=(10, 5))
-    ax = make_3d_axis(1, 121)
+    ax = make_3d_axis(1, 121, unit="m")
 
     for transform in transforms:
         pt.plot_transform(ax, A2B=transform)
 
     ax.view_init(elev=30, azim=20)
-    set_label(ax, title)
+    ax.set_title(title)
     fig.show()
 
 
@@ -77,17 +77,15 @@ def view_boards(base_to_grasp, boards, new_boards, title):
 
 def view_poses(base_to_tcp_Ts, tcp_to_cam, cam_to_pattern_Ts, title):
     fig = plt.figure(figsize=(10, 5))
-    ax = make_3d_axis(1, 121)
+    ax = make_3d_axis(1, 121, unit="m")
 
     count = 0
     for i in range(len(base_to_tcp_Ts)):
         pt.plot_transform(ax, A2B=base_to_tcp_Ts[i], name="t" + str(count))
-        # pt.plot_transform(
-        #     ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam, name="c" + str(count))
         pt.plot_transform(
             ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i], name="b" + str(count))
         count += 1
 
     ax.view_init(elev=30, azim=20)
-    set_label(ax, title)
+    ax.set_title(title)
     fig.show()
