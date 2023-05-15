@@ -79,12 +79,20 @@ def view_poses(base_to_tcp_Ts, tcp_to_cam, cam_to_pattern_Ts, title):
     fig = plt.figure(figsize=(10, 5))
     ax = make_3d_axis(1, 121, unit="m")
 
-    count = 0
     for i in range(len(base_to_tcp_Ts)):
-        pt.plot_transform(ax, A2B=base_to_tcp_Ts[i], name="t" + str(count))
+        # pt.plot_transform(ax, A2B=base_to_tcp_Ts[i], name="t" + str(i))
         pt.plot_transform(
-            ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i], name="b" + str(count))
-        count += 1
+            ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i], name="b" + str(i))
+        # print((base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i])[0:3, 3])
+
+    error = 0
+    last_board_pose = base_to_tcp_Ts[0] @ tcp_to_cam @ cam_to_pattern_Ts[0]
+    for i in range(1, len(base_to_tcp_Ts)):
+        board_pose = base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i]
+        error += np.linalg.norm(last_board_pose[0:3,
+                                3] - board_pose[0:3, 3])
+        last_board_pose = board_pose
+    print(error)
 
     ax.view_init(elev=30, azim=20)
     ax.set_title(title)

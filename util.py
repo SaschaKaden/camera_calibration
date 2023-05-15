@@ -13,4 +13,5 @@ def load_transforms(path):
     ee_to_base = pt.transform_from(
         ee_to_base_mat[0:3, 0:3], ee_to_base_mat[0:3, 3] * scale)
 
+    # print(base_to_ee @ ee_to_base)
     return base_to_ee, ee_to_base

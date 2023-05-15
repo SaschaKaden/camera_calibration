@@ -1,14 +1,16 @@
 import cv2
+import numpy as np
 import matplotlib.pyplot as plt
 from pytransform3d import transformations as pt
+from pytransform3d import rotations as rotations
 
 import calib
 import vis
 import util
 
-CALIB_INTRINSIC = True
+CALIB_INTRINSIC = False
 CALIB_HAND_EYE = True
-UNDISTORT = True
+UNDISTORT = False
 SHOW_IMAGES = False
 
 start_img = 12
@@ -58,7 +60,6 @@ if __name__ == '__main__':
             T = calib.calibrate_extrinsic(
                 obj_pts[0], img_pts[0], K, dist_coeffs, hand_eye_img, SHOW_IMAGES)
             pattern_to_cam_Ts.append(T)
-
         tcp_to_base_Ts = []
         base_to_tcp_Ts = []
         for i in range(start_img, end_img + 1):
@@ -73,6 +74,10 @@ if __name__ == '__main__':
 
         tcp_to_cam = calib.calib_hand_eye(tcp_to_base_Ts, pattern_to_cam_Ts)
 
+        # tcp_to_cam[0, 3] = -0.05
+        tcp_to_cam[1, 3] = -0.05
+        tcp_to_cam[2, 3] = -0.05
         vis.view_poses(base_to_tcp_Ts, tcp_to_cam,
-                       pattern_to_cam_Ts, "board poses")
+                       cam_to_pattern_Ts, "board poses")
+        print(tcp_to_cam)
         plt.show()

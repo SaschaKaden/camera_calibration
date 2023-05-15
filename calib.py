@@ -66,13 +66,13 @@ def calibrate_extrinsic(obj_points, img_points, K, dist_coeffs, image, show_imag
         obj_points, rvec, tvec, K, dist_coeffs)
     error = cv2.norm(img_points, img_points_projected,
                      cv2.NORM_L2) / len(img_points_projected)
-    print("total error: {}".format(error))
+    # print("total error: {}".format(error))
 
     return pt.transform_from(rot_mat, tvec.transpose())
 
 
-def calib_hand_eye_method(tcp_to_base_Ts, pattern_to_cam_Ts, method):
-    len = tcp_to_base_Ts.__len__()
+def calib_hand_eye_method(gripper_to_base_Ts, pattern_to_cam_Ts, method):
+    len = gripper_to_base_Ts.__len__()
     method_str = ""
     if method is cv2.CALIB_HAND_EYE_PARK:
         method_str = "PARK"
@@ -85,26 +85,30 @@ def calib_hand_eye_method(tcp_to_base_Ts, pattern_to_cam_Ts, method):
     elif method is cv2.CALIB_HAND_EYE_DANIILIDIS:
         method_str = "DANIILIDIS"
 
-    tcp_to_base_Rs = []
-    tcp_to_base_ts = []
+    gripper_to_base_Rs = []
+    gripper_to_base_ts = []
     pattern_to_cam_Rs = []
     pattern_to_cam_ts = []
     base_to_tcp = []
     cam_to_pattern = []
 
-    for T in tcp_to_base_Ts:
-        tcp_to_base_Rs.append(T[0:3, 0:3])
-        tcp_to_base_ts.append(T[0:3, 3])
+    for T in gripper_to_base_Ts:
+        gripper_to_base_Rs.append(T[0:3, 0:3])
+        gripper_to_base_ts.append(T[0:3, 3])
         base_to_tcp.append(pt.invert_transform(T))
     for T in pattern_to_cam_Ts:
         pattern_to_cam_Rs.append(T[0:3, 0:3])
         pattern_to_cam_ts.append(T[0:3, 3])
         cam_to_pattern.append(pt.invert_transform(T))
 
+    R_cam2gripper = np.matrix([[0.0000000, -1.0000000,  0.0000000],
+                               [1.0000000,  0.0000000,  0.0000000],
+                               [0.0000000,  0.0000000,  1.0000000]])
+    t_cam2gripper = np.float32(np.matrix([[0.06], [0.0], [0.1]]))
     rot, t = cv2.calibrateHandEye(
-        tcp_to_base_Rs, tcp_to_base_ts, pattern_to_cam_Rs, pattern_to_cam_ts, method=method)
+        gripper_to_base_Rs, gripper_to_base_ts, pattern_to_cam_Rs, pattern_to_cam_ts, R_cam2gripper=R_cam2gripper, t_cam2gripper=t_cam2gripper, method=method)
     cam_to_tcp = pt.transform_from(rot, t.transpose())
-    if np.linalg.det(rot) < 0.5:
+    if np.linalg.det(rot) < 0.5 or np.isnan(rot).any():
         return {
             "method": method_str,
             "error": 999999999,
@@ -114,11 +118,11 @@ def calib_hand_eye_method(tcp_to_base_Ts, pattern_to_cam_Ts, method):
     tcp_to_cam = pt.invert_transform(cam_to_tcp)
 
     error = 0
-    last_board_pose = base_to_tcp[0] @ tcp_to_cam @ pattern_to_cam_Ts[0]
+    last_board_pose = base_to_tcp[0] @ tcp_to_cam @ cam_to_pattern[0]
     for i in range(1, len):
-        board_pose = base_to_tcp[i] @ tcp_to_cam @ pattern_to_cam_Ts[i]
-        error += np.linalg.norm(last_board_pose[1:3,
-                                3] - board_pose[1:3, 3])
+        board_pose = base_to_tcp[i] @ tcp_to_cam @ cam_to_pattern[i]
+        error += np.linalg.norm(last_board_pose[0:3,
+                                3] - board_pose[0:3, 3])
         last_board_pose = board_pose
     error /= len
 
