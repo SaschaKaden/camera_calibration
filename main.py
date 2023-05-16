@@ -7,14 +7,15 @@ from pytransform3d import rotations as rotations
 import calib
 import vis
 import util
+import aruco
 
 CALIB_INTRINSIC = False
 CALIB_HAND_EYE = True
-UNDISTORT = False
+UNDISTORT = True
 SHOW_IMAGES = False
 
-start_img = 12
-end_img = 37
+start_img = 0
+end_img = 32
 
 
 def undistort(image, K, coeffs):
@@ -24,6 +25,8 @@ def undistort(image, K, coeffs):
 
 
 if __name__ == '__main__':
+    np.set_printoptions(precision=3)
+
     if CALIB_INTRINSIC:
         calib_images = []
         for i in range(0, 23):
@@ -45,50 +48,54 @@ if __name__ == '__main__':
         #     cv2.destroyWindow("undistort")
 
     if CALIB_HAND_EYE:
-        K, dist_coeffs = calib.load_calib()
+        K, dist_coeffs, tcp_to_cam = calib.load_calib()
         hand_eye_images = []
         pattern_to_cam_Ts = []
+        tcp_to_base_Ts = []
+        base_to_tcp_Ts = []
+
         for i in range(start_img, end_img + 1):
             hand_eye_img = cv2.imread(
                 "data/eye-to-hand/{}.png".format(i), cv2.IMREAD_GRAYSCALE)
             if UNDISTORT:
                 hand_eye_img = undistort(hand_eye_img, K, dist_coeffs)
             hand_eye_images.append(hand_eye_img)
-            obj_pts, img_pts = calib.detect_chessboard(
-                [hand_eye_img], 8, 5, 0.0298, False)
+            # obj_pts, img_pts = calib.detect_chessboard(
+            #     [hand_eye_img], 8, 5, 0.0298, False)
+            # T = calib.calibrate_extrinsic(
+            #     obj_pts[0], img_pts[0], K, dist_coeffs, hand_eye_img, SHOW_IMAGES)
+            T = aruco.detect_marker(hand_eye_img, K, dist_coeffs, SHOW_IMAGES)
+            if T is None:
+                continue
 
-            T = calib.calibrate_extrinsic(
-                obj_pts[0], img_pts[0], K, dist_coeffs, hand_eye_img, SHOW_IMAGES)
-            T[2, 3] = -T[2, 3]
             pattern_to_cam_Ts.append(T)
 
-        tcp_to_base_Ts, base_to_tcp_Ts = util.load_transforms("data/eye-to-hand/", start_img, end_img)
+            tcp_to_base, base_to_tcp = util.load_transforms_file(
+                "data/eye-to-hand/{}.xml".format(i))
+            tcp_to_base_Ts.append(tcp_to_base)
+            base_to_tcp_Ts.append(base_to_tcp)
 
         cam_to_pattern_Ts = []
         for T in pattern_to_cam_Ts:
-            cam_to_pattern_Ts.append(T)
+            cam_to_pattern_Ts.append(pt.invert_transform(T))
 
         tcp_to_cam = calib.calib_hand_eye(tcp_to_base_Ts, pattern_to_cam_Ts)
-
-        # tcp_to_cam[0, 3] = -0.05
-        # tcp_to_cam[1, 3] = -0.05
-        # tcp_to_cam[2, 3] = -0.05
+        calib.save_calib(K, dist_coeffs, tcp_to_cam)
 
         # vis.view_poses("grasps", base_to_tcp_Ts)
 
-        rot = rotations.matrix_from_euler([np.pi, 0, 0], 0, 1, 2, True)
-        base_to_pattern = pt.transform_from(rot, [0.8, 0, 0])
-        for i in range(len(pattern_to_cam_Ts)):
-            # pattern_to_cam_Ts[i][0, 3] = -pattern_to_cam_Ts[i][0, 3]
-            # pattern_to_cam_Ts[i][1, 3] = -pattern_to_cam_Ts[i][1, 3]
-            # pattern_to_cam_Ts[i][2, 3] = -pattern_to_cam_Ts[i][2, 3]
-            pattern_to_cam_Ts[i] = base_to_pattern @ pattern_to_cam_Ts[i]
-        vis.view_poses("calib", base_to_tcp_Ts, "grasp", pattern_to_cam_Ts, "pattern", [base_to_pattern], "base_to_pattern")
-
+        base_to_pattern = pt.transform_from(np.eye(3), [-0.4, 0, 0])
+        patterns = []
         poses = []
+        tcps = []
         for i in range(len(base_to_tcp_Ts)):
-            poses.append(base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i])
-        vis.view_poses("poses", poses)
+            tcps.append(base_to_tcp_Ts[i] @ tcp_to_cam)
+            patterns.append(base_to_tcp_Ts[i] @
+                            tcp_to_cam @ cam_to_pattern_Ts[i])
+            poses.append(base_to_pattern @ pattern_to_cam_Ts[i])
+        vis.view_poses(end_img, "patterns", patterns, "p")
+        vis.view_poses(5, "cam", tcps, "b",
+                       patterns, "pattern", poses, "p")
 
         # error = 0
         # last_board_pose = base_to_tcp_Ts[0] @ tcp_to_cam @ cam_to_pattern_Ts[0]

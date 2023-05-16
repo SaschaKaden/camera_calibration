@@ -101,12 +101,8 @@ def calib_hand_eye_method(gripper_to_base_Ts, pattern_to_cam_Ts, method):
         pattern_to_cam_ts.append(T[0:3, 3])
         cam_to_pattern.append(pt.invert_transform(T))
 
-    R_cam2gripper = np.matrix([[0.0000000, -1.0000000,  0.0000000],
-                               [1.0000000,  0.0000000,  0.0000000],
-                               [0.0000000,  0.0000000,  1.0000000]])
-    t_cam2gripper = np.float32(np.matrix([[0.06], [0.0], [0.1]]))
     rot, t = cv2.calibrateHandEye(
-        gripper_to_base_Rs, gripper_to_base_ts, pattern_to_cam_Rs, pattern_to_cam_ts, R_cam2gripper=R_cam2gripper, t_cam2gripper=t_cam2gripper, method=method)
+        gripper_to_base_Rs, gripper_to_base_ts, pattern_to_cam_Rs, pattern_to_cam_ts, method=method)
     cam_to_tcp = pt.transform_from(rot, t.transpose())
     if np.linalg.det(rot) < 0.5 or np.isnan(rot).any():
         return {
@@ -118,12 +114,11 @@ def calib_hand_eye_method(gripper_to_base_Ts, pattern_to_cam_Ts, method):
     tcp_to_cam = pt.invert_transform(cam_to_tcp)
 
     error = 0
-    last_board_pose = base_to_tcp[0] @ tcp_to_cam @ cam_to_pattern[0]
+    last_board = base_to_tcp[0] @ tcp_to_cam @ cam_to_pattern[0]
     for i in range(1, len):
-        board_pose = base_to_tcp[i] @ tcp_to_cam @ cam_to_pattern[i]
-        error += np.linalg.norm(last_board_pose[0:3,
-                                3] - board_pose[0:3, 3])
-        last_board_pose = board_pose
+        board = base_to_tcp[i] @ tcp_to_cam @ cam_to_pattern[i]
+        error += np.linalg.norm(last_board[0:3, 3] - board[0:3, 3])
+        last_board = board
     error /= len
 
     print("method: ", method_str)
@@ -156,10 +151,12 @@ def calib_hand_eye(tcp_to_base_Ts, pattern_to_cam_Ts):
     return results[best_index]["tcp_to_cam"]
 
 
-def save_calib(K, coeffs):
+def save_calib(K, coeffs, tcp_to_cam=None):
     cv_file = cv2.FileStorage("data/calib.xml", cv2.FILE_STORAGE_WRITE)
     cv_file.write("K", K)
     cv_file.write("dist_coeffs", coeffs)
+    if tcp_to_cam is not None:
+        cv_file.write("tcp_to_cam", tcp_to_cam)
     cv_file.release()
     print("K: ", K)
     print("distortion coefficients: ", coeffs)
@@ -169,13 +166,8 @@ def load_calib():
     cv_file = cv2.FileStorage("data/calib.xml", cv2.FILE_STORAGE_READ)
     K = cv_file.getNode("K").mat()
     dist_coeffs = cv_file.getNode("dist_coeffs").mat()
+    tcp_to_cam = cv_file.getNode("tcp_to_cam").mat()
     cv_file.release()
-    return K, dist_coeffs
-
-
-def load_calib():
-    cv_file = cv2.FileStorage("data/calib.xml", cv2.FILE_STORAGE_READ)
-    K = cv_file.getNode("K").mat()
-    dist_coeffs = cv_file.getNode("dist_coeffs").mat()
-    cv_file.release()
-    return K, dist_coeffs
+    if tcp_to_cam is None:
+        tcp_to_cam = np.eye(4)
+    return K, dist_coeffs, tcp_to_cam

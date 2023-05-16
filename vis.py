@@ -29,21 +29,20 @@ def view_points(transforms, title):
     fig.show()
 
 
-def view_poses(title, poses_1, suffix_1="a", poses_2=None, suffix_2="b", poses_3=None, suffix_3="c"):
+def view_poses(end_index, title, poses_1, suffix_1="a", poses_2=None, suffix_2="b", poses_3=None, suffix_3="c"):
     fig = plt.figure(figsize=(10, 5))
     ax = make_3d_axis(1, 121, unit="m")
 
-    for i in range(len(poses_1)):
+    for i in range(end_index):
         pt.plot_transform(ax, A2B=poses_1[i], name=suffix_1 + str(i))
 
     if poses_2 is not None:
-        for i in range(len(poses_2)):
+        for i in range(end_index):
             pt.plot_transform(ax, A2B=poses_2[i], name=suffix_2 + str(i))
 
     if poses_3 is not None:
-        for i in range(len(poses_3)):
+        for i in range(end_index):
             pt.plot_transform(ax, A2B=poses_3[i], name=suffix_3 + str(i))
-
 
     ax.view_init(elev=30, azim=20)
     ax.set_title(title)
