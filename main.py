@@ -59,14 +59,10 @@ if __name__ == '__main__':
 
             T = calib.calibrate_extrinsic(
                 obj_pts[0], img_pts[0], K, dist_coeffs, hand_eye_img, SHOW_IMAGES)
+            T[2, 3] = -T[2, 3]
             pattern_to_cam_Ts.append(T)
-        tcp_to_base_Ts = []
-        base_to_tcp_Ts = []
-        for i in range(start_img, end_img + 1):
-            base_to_tcp, tcp_to_base = util.load_transforms(
-                "data/eye-to-hand/{}.xml".format(i))
-            tcp_to_base_Ts.append(tcp_to_base)
-            base_to_tcp_Ts.append(base_to_tcp)
+
+        tcp_to_base_Ts, base_to_tcp_Ts = util.load_transforms("data/eye-to-hand/", start_img, end_img)
 
         cam_to_pattern_Ts = []
         for T in pattern_to_cam_Ts:
@@ -75,9 +71,32 @@ if __name__ == '__main__':
         tcp_to_cam = calib.calib_hand_eye(tcp_to_base_Ts, pattern_to_cam_Ts)
 
         # tcp_to_cam[0, 3] = -0.05
-        tcp_to_cam[1, 3] = -0.05
-        tcp_to_cam[2, 3] = -0.05
-        vis.view_poses(base_to_tcp_Ts, tcp_to_cam,
-                       cam_to_pattern_Ts, "board poses")
+        # tcp_to_cam[1, 3] = -0.05
+        # tcp_to_cam[2, 3] = -0.05
+
+        # vis.view_poses("grasps", base_to_tcp_Ts)
+
+        rot = rotations.matrix_from_euler([np.pi, 0, 0], 0, 1, 2, True)
+        base_to_pattern = pt.transform_from(rot, [0.8, 0, 0])
+        for i in range(len(pattern_to_cam_Ts)):
+            # pattern_to_cam_Ts[i][0, 3] = -pattern_to_cam_Ts[i][0, 3]
+            # pattern_to_cam_Ts[i][1, 3] = -pattern_to_cam_Ts[i][1, 3]
+            # pattern_to_cam_Ts[i][2, 3] = -pattern_to_cam_Ts[i][2, 3]
+            pattern_to_cam_Ts[i] = base_to_pattern @ pattern_to_cam_Ts[i]
+        vis.view_poses("calib", base_to_tcp_Ts, "grasp", pattern_to_cam_Ts, "pattern", [base_to_pattern], "base_to_pattern")
+
+        poses = []
+        for i in range(len(base_to_tcp_Ts)):
+            poses.append(base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i])
+        vis.view_poses("poses", poses)
+
+        # error = 0
+        # last_board_pose = base_to_tcp_Ts[0] @ tcp_to_cam @ cam_to_pattern_Ts[0]
+        # for i in range(1, len(base_to_tcp_Ts)):
+        #     board_pose = base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i]
+        #     error += np.linalg.norm(last_board_pose[0:3,
+        #                             3] - board_pose[0:3, 3])
+        #     last_board_pose = board_pose
+        # print(error)
         print(tcp_to_cam)
         plt.show()

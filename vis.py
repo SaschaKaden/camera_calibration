@@ -29,70 +29,21 @@ def view_points(transforms, title):
     fig.show()
 
 
-def view_tcp_boards(base_to_grasp, boards, title):
-    tm = TransformManager()
-    count = 0
-    for transform in base_to_grasp:
-        tm.add_transform("base", "grasp" + str(count), transform)
-        count += 1
-
-    count = 0
-    for transform in boards:
-        tm.add_transform("base", "board" + str(count), transform)
-        count += 1
-
-    fig = plt.figure(figsize=(10, 5))
-    ax = make_3d_axis(1, 121)
-    ax = tm.plot_frames_in("base", ax=ax, alpha=0.4, s=0.2)
-    ax.view_init(elev=30, azim=20)
-
-    set_label(ax, title)
-    fig.show()
-
-
-def view_boards(base_to_grasp, boards, new_boards, title):
-    tm = TransformManager()
-    count = 0
-    for transform in base_to_grasp:
-        tm.add_transform("base", "grasp" + str(count), transform)
-        count += 1
-
-    count = 0
-    for transform in boards:
-        tm.add_transform("base", "board" + str(count), transform)
-        count += 1
-
-    for transform in new_boards:
-        tm.add_transform("base", "new_board" + str(count), transform)
-        count += 1
-
-    fig = plt.figure(figsize=(10, 5))
-    ax = make_3d_axis(1, 121)
-    ax = tm.plot_frames_in("base", ax=ax, alpha=0.6, s=0.2)
-    ax.view_init(elev=30, azim=20)
-
-    set_label(ax, title)
-    fig.show()
-
-
-def view_poses(base_to_tcp_Ts, tcp_to_cam, cam_to_pattern_Ts, title):
+def view_poses(title, poses_1, suffix_1="a", poses_2=None, suffix_2="b", poses_3=None, suffix_3="c"):
     fig = plt.figure(figsize=(10, 5))
     ax = make_3d_axis(1, 121, unit="m")
 
-    for i in range(len(base_to_tcp_Ts)):
-        # pt.plot_transform(ax, A2B=base_to_tcp_Ts[i], name="t" + str(i))
-        pt.plot_transform(
-            ax, A2B=base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i], name="b" + str(i))
-        # print((base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i])[0:3, 3])
+    for i in range(len(poses_1)):
+        pt.plot_transform(ax, A2B=poses_1[i], name=suffix_1 + str(i))
 
-    error = 0
-    last_board_pose = base_to_tcp_Ts[0] @ tcp_to_cam @ cam_to_pattern_Ts[0]
-    for i in range(1, len(base_to_tcp_Ts)):
-        board_pose = base_to_tcp_Ts[i] @ tcp_to_cam @ cam_to_pattern_Ts[i]
-        error += np.linalg.norm(last_board_pose[0:3,
-                                3] - board_pose[0:3, 3])
-        last_board_pose = board_pose
-    print(error)
+    if poses_2 is not None:
+        for i in range(len(poses_2)):
+            pt.plot_transform(ax, A2B=poses_2[i], name=suffix_2 + str(i))
+
+    if poses_3 is not None:
+        for i in range(len(poses_3)):
+            pt.plot_transform(ax, A2B=poses_3[i], name=suffix_3 + str(i))
+
 
     ax.view_init(elev=30, azim=20)
     ax.set_title(title)
