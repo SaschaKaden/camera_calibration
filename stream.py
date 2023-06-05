@@ -1,22 +1,29 @@
-import cv2
+import cv2 as cv
 import numpy as np
+import pyrealsense2 as rs
 
 
 def save(img, image_path):
-    cv2.imwrite(image_path, img)
+    cv.imwrite(image_path, img)
 
 
 def display(img, window_name="default", destroyable=True):
-    cv2.imshow(window_name, img)
+    cv.imshow(window_name, img)
     if destroyable is True:
-        cv2.waitKey(0)
-        cv2.destroyWindow(window_name)
+        cv.waitKey(0)
+        cv.destroyWindow(window_name)
 
 
 if __name__ == '__main__':
-    cap = cv2.VideoCapture(1)  # Define general video driver
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    # show live streams from camera
+    cap = cv.VideoCapture(0)  # Define general video driver
+
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
+
+    cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     count = 0
     while True:
@@ -24,7 +31,7 @@ if __name__ == '__main__':
 
         image = frame  # cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         display(image, "live stream", False)
-        key = cv2.waitKey(1)
+        key = cv.waitKey(1)
         if key == ord('q'):
             break
         elif key == ord('s'):
@@ -35,4 +42,4 @@ if __name__ == '__main__':
 
     # When everything done, release the capture
     cap.release()
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()

@@ -27,7 +27,7 @@ def detect_marker(img, K, dist_coeffs, show_image=False, dictionary=aruco.DICT_5
         # Draw detected markers on the image
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
         aruco.drawDetectedMarkers(img, corners, ids)
-        cv2.drawFrameAxes(img, K, dist_coeffs, rvec, tvec, 190.0)
+        cv2.drawFrameAxes(img, K, dist_coeffs, rvec, tvec, 130.0)
 
         if show_image:
             cv2.imshow('Detected Markers', img)
@@ -36,5 +36,5 @@ def detect_marker(img, K, dist_coeffs, show_image=False, dictionary=aruco.DICT_5
 
         return pt.transform_from(rot_mat, tvec[0])
     else:
-        print('No ArUco markers detected.')
+        # print('No ArUco markers detected.')
         return None
