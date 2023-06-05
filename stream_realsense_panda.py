@@ -3,11 +3,15 @@ import numpy as np
 import pyrealsense2 as rs
 import calib
 import aruco
+from franka_msgs.msg import FrankaState
+import rospy
 from pytransform3d import transformations as pt
+import vis
 
 
 SHOW_IMAGES = False
-SAVE_PC = False
+SHOW_TCP = True
+np.set_printoptions(precision=3)
 
 
 def save(img, image_path):
@@ -15,7 +19,7 @@ def save(img, image_path):
 
 
 def display(img, window_name="default", destroyable=True):
-    img = cv.resize(img, (1280, 720))
+    imS = cv.resize(img, (1280, 720))
     cv.imshow(window_name, img)
     if destroyable is True:
         cv.waitKey(0)
@@ -39,40 +43,65 @@ def init_rs():
         exit(0)
 
     config.enable_stream(rs.stream.color, 1280, 720, rs.format.rgb8, 30)
-    config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
     pipeline.start(config)
     return pipeline
 
 
+class StateViewer:
+    def __init__(self, rate=10, print_data=False):
+        rospy.init_node('listener', anonymous=True)
+        self.rate = rospy.Rate(rate)
+        self.print_data = print_data
+        self.joints = []
+        self.tcp = []
+
+        self.sub = rospy.Subscriber(
+            "/franka_state_controller/franka_states", FrankaState, self.joint_callback)
+
+    def joint_callback(self, franka_state):
+        # print("Franka State: ", franka_state)
+        self.joints = franka_state.q
+        self.tcp = franka_state.O_T_EE
+        self.tcp = np.reshape(self.tcp, (4, 4)).transpose()
+        if SHOW_TCP:
+            print("TCP: ")
+            print(self.tcp)
+
+    def get_tcp(self):
+        return self.tcp
+
+
 if __name__ == '__main__':
     K, dist_coeffs, tcp_to_cam = calib.load_calib()
-    pc = rs.pointcloud()
-    decimate = rs.decimation_filter()
-    decimate.set_option(rs.option.filter_magnitude, 2)
-    decimation_filter = rs.decimation_filter()
-    spatial_filter = rs.spatial_filter()
-    temporal_filter = rs.temporal_filter()
+    viewer = StateViewer()
 
     pipeline = init_rs()
 
     count = 0
     while True:
         frames = pipeline.wait_for_frames()
-        depth_frame = frames.get_depth_frame()
-        depth_frame = decimate.process(depth_frame)
-        depth_frame = spatial_filter.process(depth_frame)
-        depth_frame = temporal_filter.process(depth_frame)
-        color_frame = frames.get_color_frame()
-
-        depth_image = np.asanyarray(depth_frame.get_data())
-        color_image = np.asanyarray(color_frame.get_data())
+        color_image = np.asanyarray(frames.get_color_frame().get_data())
         color_image = cv.cvtColor(color_image, cv.COLOR_RGB2BGR)
         gray_image = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
         display(color_image, "live stream", False)
 
-        pc.map_to(color_frame)
-        points = pc.calculate(depth_frame)
-        points.export_to_ply("data/1.ply", color_frame);
+        T = aruco.detect_marker(gray_image, K, dist_coeffs, SHOW_IMAGES)
+        if T is None:
+            continue
+        base_to_ee = viewer.get_tcp()
+        base_to_aruco = base_to_ee @ tcp_to_cam @ pt.invert_transform(T)
+
+        print("Base to EE: ")
+        print(base_to_ee)
+        print("TCP to Cam: ")
+        print(tcp_to_cam)
+        print("TCP to ArUco: ")
+        print(T)
+
+        print("Base to ArUco: ")
+        print(base_to_aruco)
+        # if base_to_aruco is not None:
+        #     vis.view_poses(1, "patterns", [base_to_aruco])
 
         key = cv.waitKey(1)
         if key == ord('q'):

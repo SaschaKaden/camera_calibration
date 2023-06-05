@@ -34,18 +34,9 @@ if __name__ == '__main__':
                 "data/intrinsic/{}.png".format(i), cv2.IMREAD_GRAYSCALE))
 
         # calibrate the camera
-        obj_pts, img_pts = calib.detect_chessboard(
-            calib_images, 10, 7, 0.022, SHOW_IMAGES)
-        K, dist_coeffs = calib.calibrate_intrinsic(
-            obj_pts, img_pts, calib_images[0])
+        obj_pts, img_pts = calib.detect_chessboard(calib_images, 10, 7, 0.022, SHOW_IMAGES)
+        K, dist_coeffs = calib.calibrate_intrinsic(obj_pts, img_pts, calib_images[0])
         calib.save_calib(K, dist_coeffs)
-        undistort_images = []
-
-        # for calib_img in calib_images:
-        #     undistort_images.append(undistort(calib_img, K, dist_coeffs))
-        #     cv2.imshow("undistort", calib_img)
-        #     cv2.waitKey(0)
-        #     cv2.destroyWindow("undistort")
 
     if CALIB_HAND_EYE:
         K, dist_coeffs, tcp_to_cam = calib.load_calib()
@@ -55,23 +46,17 @@ if __name__ == '__main__':
         base_to_tcp_Ts = []
 
         for i in range(start_img, end_img + 1):
-            hand_eye_img = cv2.imread(
-                "data/eye-to-hand/{}.png".format(i), cv2.IMREAD_GRAYSCALE)
+            hand_eye_img = cv2.imread("data/eye-to-hand/{}.png".format(i), cv2.IMREAD_GRAYSCALE)
             if UNDISTORT:
                 hand_eye_img = undistort(hand_eye_img, K, dist_coeffs)
             hand_eye_images.append(hand_eye_img)
-            # obj_pts, img_pts = calib.detect_chessboard(
-            #     [hand_eye_img], 8, 5, 0.0298, False)
-            # T = calib.calibrate_extrinsic(
-            #     obj_pts[0], img_pts[0], K, dist_coeffs, hand_eye_img, SHOW_IMAGES)
             T = aruco.detect_marker(hand_eye_img, K, dist_coeffs, SHOW_IMAGES)
             if T is None:
                 continue
 
             pattern_to_cam_Ts.append(T)
 
-            tcp_to_base, base_to_tcp = util.load_transforms_file(
-                "data/eye-to-hand/{}.xml".format(i))
+            tcp_to_base, base_to_tcp = util.load_transforms_file("data/eye-to-hand/{}.xml".format(i))
             tcp_to_base_Ts.append(tcp_to_base)
             base_to_tcp_Ts.append(base_to_tcp)
 
