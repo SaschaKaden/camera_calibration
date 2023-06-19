@@ -9,8 +9,8 @@ from pytransform3d import transformations as pt
 import vis
 
 
-SHOW_IMAGES = False
-SHOW_TCP = True
+SHOW_IMAGES = True
+SHOW_TCP = False
 np.set_printoptions(precision=3)
 
 
@@ -61,8 +61,9 @@ class StateViewer:
     def joint_callback(self, franka_state):
         # print("Franka State: ", franka_state)
         self.joints = franka_state.q
-        self.tcp = franka_state.O_T_EE
-        self.tcp = np.reshape(self.tcp, (4, 4)).transpose()
+        self.tcp = np.reshape(franka_state.O_T_EE, (4, 4), order='F')
+        self.tcp[:3, :3] = np.linalg.qr(
+            self.tcp[:3, :3], mode='complete')[0]
         if SHOW_TCP:
             print("TCP: ")
             print(self.tcp)
