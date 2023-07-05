@@ -5,32 +5,6 @@ from pytransform3d import transformations as pt
 import util
 
 
-def detect_chessboard(images, num_x, num_y, square_size, show_images=True):
-    obj_points = []  # 3d point in real world space
-    img_points = []  # 2d points in image plane.
-
-    obj_p = np.zeros((num_y * num_x, 3), np.float32)
-    obj_p[:, :2] = np.mgrid[0:num_x, 0:num_y].T.reshape(-1, 2)
-    obj_p *= square_size  # add the square size of the chessboard
-
-    for chess_img in images:
-        ret, corners = cv2.findChessboardCorners(
-            chess_img, (num_x, num_y), None)
-        if ret is True:
-            obj_points.append(obj_p)
-            corners = cv2.cornerSubPix(
-                chess_img, corners, (8, 8), (-1, -1), (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
-            img_points.append(corners)
-            if show_images:
-                color_image = cv2.cvtColor(chess_img, cv2.COLOR_GRAY2BGR)
-                cv2.drawChessboardCorners(
-                    color_image, (num_x, num_y), corners, ret)
-                cv2.imshow('img', color_image)
-                cv2.waitKey(0)
-
-    return obj_points, img_points
-
-
 def calibrate_intrinsic(obj_points, img_points, img):
     ret, K, dist_coeffs, rvecs, tvecs = cv2.calibrateCamera(
         obj_points, img_points, img.shape[::-1], None, None)

@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import pyrealsense2 as rs
 import calib
-import aruco
+import detector
 from franka_msgs.msg import FrankaState
 import rospy
 from pytransform3d import transformations as pt
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         gray_image = cv.cvtColor(color_image, cv.COLOR_BGR2GRAY)
         display(color_image, "live stream", False)
 
-        T = aruco.detect_marker(gray_image, K, dist_coeffs, SHOW_IMAGES)
+        T = detector.detect_marker(gray_image, K, dist_coeffs, SHOW_IMAGES)
         if T is None:
             continue
         base_to_ee = viewer.get_tcp()

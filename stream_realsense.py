@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import pyrealsense2 as rs
 import calib
-import aruco
+import detector
 from pytransform3d import transformations as pt
 
 

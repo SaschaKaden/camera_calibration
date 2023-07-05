@@ -7,15 +7,15 @@ from pytransform3d import rotations as rotations
 import calib
 import vis
 import util
-import aruco
+import detector
 
 CALIB_INTRINSIC = False
 CALIB_HAND_EYE = True
-UNDISTORT = True
-SHOW_IMAGES = False
+UNDISTORT = False
+SHOW_IMAGES = True
 
 start_img = 0
-end_img = 32
+end_img = 12
 
 
 def undistort(image, K, coeffs):
@@ -34,7 +34,7 @@ if __name__ == '__main__':
                 "data/intrinsic/{}.png".format(i), cv2.IMREAD_GRAYSCALE))
 
         # calibrate the camera
-        obj_pts, img_pts = calib.detect_chessboard(calib_images, 10, 7, 0.022, SHOW_IMAGES)
+        obj_pts, img_pts = detector.detect_chessboard(calib_images, 10, 7, 0.022, SHOW_IMAGES)
         K, dist_coeffs = calib.calibrate_intrinsic(obj_pts, img_pts, calib_images[0])
         calib.save_calib(K, dist_coeffs)
 
@@ -50,7 +50,8 @@ if __name__ == '__main__':
             if UNDISTORT:
                 hand_eye_img = undistort(hand_eye_img, K, dist_coeffs)
             hand_eye_images.append(hand_eye_img)
-            T = aruco.detect_marker(hand_eye_img, K, dist_coeffs, SHOW_IMAGES)
+            # T = detector.detect_aruco(hand_eye_img, K, dist_coeffs, SHOW_IMAGES)
+            T = detector.detect_charuco_board(hand_eye_img, K, dist_coeffs, 7, 5, SHOW_IMAGES)
             if T is None:
                 continue
 

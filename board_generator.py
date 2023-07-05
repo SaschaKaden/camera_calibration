@@ -27,22 +27,40 @@ ARUCO_DICT = {
     aruco.DICT_APRILTAG_36h11: "DICT_APRILTAG_36h11"
 }
 
-id = 24
-type = aruco.DICT_5X5_100
-output = "data/tags/"
-size = 1000
 
-if __name__ == '__main__':
-    print(cv2.__version__)
+output_folder = "data/tags/"
+
+
+def generate_aruco(size, id, type):
     dictionary = aruco.getPredefinedDictionary(type)
-
     print("Generating ArUCo tag of type '{}' with ID '{}'".format(type, id))
-    # aruco.generateImageMarker(dictionary, id, size)
-    marker_img = aruco.drawMarker(dictionary, id, size)
 
+    marker_img = aruco.drawMarker(dictionary, id, size)
     # Save the tag generated
-    tag_name = output + ARUCO_DICT[type] + "_ID_" + str(id) + ".png"
+    tag_name = output_folder + ARUCO_DICT[type] + "_ID_" + str(id) + ".png"
     cv2.imwrite(tag_name, marker_img)
     cv2.imshow("ArUCo Tag", marker_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    return marker_img
+
+def generate_board(x, y, size, type):
+    dictionary = aruco.getPredefinedDictionary(type)
+    print("Generating Charuco board of type '{}'".format(type))
+
+    board = aruco.CharucoBoard_create(x, y, 1, 0.5, dictionary)
+    img = board.draw((2000, 1500))
+    # Save the tag generated
+    tag_name = output_folder + ARUCO_DICT[type] + "_board.png"
+    cv2.imwrite(tag_name, img)
+    cv2.imshow("ArUCo Board", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return img
+
+
+
+if __name__ == '__main__':
+    generate_aruco(1000, 24, aruco.DICT_5X5_250)
+    generate_board(7,5, 1000, aruco.DICT_5X5_250)
+
